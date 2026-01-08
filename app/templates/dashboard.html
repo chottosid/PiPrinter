@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PiPrinter Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+        }
+
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .preview-container {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f9f9f9;
+        }
+
+        #pdf-preview {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .printer-selector {
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Quicksand', sans-serif;
+            cursor: pointer;
+        }
+
+        .print-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        .print-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .print-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .history-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item h3 {
+            color: #444;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .history-item .date {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .history-item .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-printed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .printer-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .printer-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .printer-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.green {
+            background: #27ae60;
+        }
+
+        .status-dot.red {
+            background: #e74c3c;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖨️ PiPrinter</h1>
+            <div class="user-info">
+                <span id="user-email"></span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>Upload & Print</h2>
+                
+                <div class="printer-status" id="printer-status">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="status-text">Checking...</span>
+                </div>
+
+                <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+                    <div class="upload-icon">📄</div>
+                    <h3>Click or drag PDF here</h3>
+                    <p style="color: #999; margin-top: 10px;">Upload your PDF document</p>
+                    <input type="file" id="file-input" accept=".pdf" style="display: none;" onchange="handleFileSelect(event)">
+                </div>
+
+                <div class="preview-container" id="preview-container">
+                    <p style="text-align: center; color: #999;">PDF preview will appear here</p>
+                    <canvas id="pdf-preview" class="hidden"></canvas>
+                </div>
+
+                <div class="printer-selector" id="printer-selector">
+                    <label>Select Printer:</label>
+                    <select id="printer-select">
+                        <option value="">Loading printers...</option>
+                    </select>
+                </div>
+
+                <button class="print-btn" id="print-btn" onclick="printDocument()" disabled>
+                    Print Document
+                </button>
+                <div id="print-message" class="message hidden"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Document History</h2>
+                <div class="history-list" id="history-list">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:6969/api';
+        let authToken = localStorage.getItem('authToken');
+        let currentDocument = null;
+        let pdfDoc = null;
+        let currentDocumentId = null;
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        function setAuth(token) {
+            authToken = token;
+            localStorage.setItem('authToken', token);
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = '/api/auth/login';
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+                ...options.headers
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+                
+                if (response.status === 401) {
+                    logout();
+                    return null;
+                }
+                
+                return response;
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        async function checkAuth() {
+            if (!authToken) {
+                window.location.href = '/api/auth/login';
+                return false;
+            }
+
+            const response = await apiCall('/auth/me');
+            if (!response || !response.ok) {
+                logout();
+                return false;
+            }
+
+            const user = await response.json();
+            document.getElementById('user-email').textContent = user.email;
+            return true;
+        }
+
+        async function checkPrinterStatus() {
+            const response = await apiCall('/printers/status');
+            if (response) {
+                const data = await response.json();
+                const statusDiv = document.getElementById('printer-status');
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+
+                if (data.status === 'connected') {
+                    statusDiv.className = 'printer-status connected';
+                    statusDot.className = 'status-dot green';
+                    statusText.textContent = `Connected - ${data.printers_available} printer(s) available`;
+                } else {
+                    statusDiv.className = 'printer-status disconnected';
+                    statusDot.className = 'status-dot red';
+                    statusText.textContent = 'Disconnected - Check CUPS service';
+                }
+            }
+        }
+
+        async function loadPrinters() {
+            const response = await apiCall('/printers/');
+            if (response) {
+                const printers = await response.json();
+                const select = document.getElementById('printer-select');
+                select.innerHTML = '';
+
+                if (printers.length === 0) {
+                    select.innerHTML = '<option value="">No printers available</option>';
+                } else {
+                    printers.forEach(printer => {
+                        const option = document.createElement('option');
+                        option.value = printer.name;
+                        option.textContent = `${printer.name} (${printer.state})`;
+                        select.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadAndPreview(file);
+            }
+        }
+
+        const uploadArea = document.getElementById('upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                uploadAndPreview(file);
+            } else {
+                showMessage('Please upload a PDF file', 'error');
+            }
+        });
+
+        async function uploadAndPreview(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/documents/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentDocumentId = data.id;
+                    await previewPDF(file);
+                    document.getElementById('print-btn').disabled = false;
+                    showMessage('Document uploaded successfully!', 'success');
+                } else {
+                    showMessage(data.detail || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function previewPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument(arrayBuffer).promise;
+            
+            const page = await pdfDoc.getPage(1);
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale });
+
+            const canvas = document.getElementById('pdf-preview');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            canvas.classList.remove('hidden');
+            document.querySelector('.preview-container p').classList.add('hidden');
+        }
+
+        async function printDocument() {
+            const printerSelect = document.getElementById('printer-select');
+            const printerName = printerSelect.value;
+
+            if (!printerName || !currentDocumentId) {
+                showMessage('Please select a printer and upload a document', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('printer_name', printerName);
+
+            try {
+                const response = await fetch(`${API_BASE}/documents/print/${currentDocumentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(data.message, data.status === 'printed' ? 'success' : 'error');
+                    loadHistory();
+                } else {
+                    showMessage(data.detail || 'Print failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function loadHistory() {
+            const response = await apiCall('/documents/history');
+            if (response) {
+                const documents = await response.json();
+                const historyList = document.getElementById('history-list');
+
+                if (documents.length === 0) {
+                    historyList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No documents yet</p>';
+                    return;
+                }
+
+                historyList.innerHTML = documents.map(doc => `
+                    <div class="history-item">
+                        <h3>${doc.original_filename}</h3>
+                        <div class="date">Uploaded: ${new Date(doc.uploaded_at).toLocaleString()}</div>
+                        ${doc.print_jobs.map(job => `
+                            <div>
+                                <span class="status status-${job.status}">${job.status}</span>
+                                <small>Printer: ${job.printer_name}</small>
+                                <button class="delete-btn" onclick="deleteDocument(${doc.id})">Delete</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('Are you sure you want to delete this document?')) return;
+
+            const response = await apiCall(`/documents/${docId}`, {
+                method: 'DELETE'
+            });
+
+            if (response && response.ok) {
+                showMessage('Document deleted', 'success');
+                loadHistory();
+            } else {
+                showMessage('Failed to delete document', 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('print-message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (await checkAuth()) {
+                checkPrinterStatus();
+                loadPrinters();
+                loadHistory();
+                setInterval(checkPrinterStatus, 30000);
+            }
+        });
+    </script>
+</body>
+</html>
