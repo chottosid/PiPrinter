@@ -4,6 +4,20 @@ Turn your Raspberry Pi into a web-connected printer! Upload PDFs from any device
 
 ---
 
+## Get the Code
+
+Clone the repository to your Raspberry Pi:
+
+```bash
+cd /home/pi
+git clone https://github.com/chottosid/PiPrinter.git
+cd PiPrinter
+```
+
+Or download and extract the ZIP file from [GitHub](https://github.com/chottosid/PiPrinter/archive/refs/heads/main.zip).
+
+---
+
 ## Requirements
 
 - Raspberry Pi with Raspberry Pi OS
